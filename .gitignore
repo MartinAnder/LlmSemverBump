@@ -1,0 +1,14 @@
+# .NET build outputs
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Environment / secrets
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
