@@ -38,7 +38,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          RESULT=$(dotnet tool run llm-semver-bump --output json)
+          RESULT=$(llm-semver-bump --output json)
           echo "$RESULT" | jq .
 
           NEW_VERSION=$(echo "$RESULT" | jq -r '.new_version')
@@ -53,7 +53,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          dotnet tool run llm-semver-bump --apply --git-tag
+          llm-semver-bump --apply --git-tag
 
       - name: Commit and push
         run: |
