@@ -12,13 +12,13 @@ public class ClaudeCodeAnalyzer : IClaudeCodeAnalyzer
 {
     public async Task<AnalysisResult> AnalyzeAsync(
         string repoPath,
-        string lastTag,
+        string lastRef,
         string? model = null
     )
     {
         await AssertClaudeIsAuthenticatedAsync();
 
-        var prompt = BuildPrompt(lastTag);
+        var prompt = BuildPrompt(lastRef);
         var output = await RunClaudeAsync(
             repoPath,
             prompt,
@@ -129,12 +129,12 @@ public class ClaudeCodeAnalyzer : IClaudeCodeAnalyzer
         }
     }
 
-    private static string BuildPrompt(string lastTag)
+    private static string BuildPrompt(string lastRef)
     {
         return $$"""
             You are a semantic versioning analyst for a .NET NuGet package.
 
-            Analyze the git changes since the last release tag `{{lastTag}}` in this repository
+            Analyze the git changes since `{{lastRef}}` in this repository
             and determine the correct semver bump level.
 
             Use `git log`, `git diff`, and read any relevant source files

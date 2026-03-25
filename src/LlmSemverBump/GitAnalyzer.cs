@@ -4,7 +4,7 @@ namespace LlmSemverBump;
 
 public static class GitAnalyzer
 {
-    public static async Task<string> GetLastTagAsync(
+    public static async Task<string?> TryGetLastTagAsync(
         string repoPath
     )
     {
@@ -18,11 +18,79 @@ public static class GitAnalyzer
         }
         catch
         {
-            throw new InvalidOperationException(
-                "No git tags found. Create an initial version tag "
-                + "first, e.g.: git tag v0.1.0"
-            );
+            return null;
         }
+    }
+
+    public static async Task<string?> TryGetLastVersionChangeRefAsync(
+        string repoPath
+    )
+    {
+        try
+        {
+            var hash = await RunGitAsync(
+                repoPath,
+                "log -1 --pretty=format:\"%H\" -G \"<Version>[0-9]\" -- *.csproj"
+            );
+            var trimmed = hash.Trim();
+            return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static async Task<Version?> ReadVersionFromCsprojAsync(
+        string repoPath
+    )
+    {
+        var files = Directory.GetFiles(
+            repoPath,
+            "*.csproj",
+            SearchOption.AllDirectories
+        );
+
+        Version? highest = null;
+
+        foreach (var file in files)
+        {
+            var content = await File.ReadAllTextAsync(file);
+
+            if (content.Contains(
+                    "<IsPackable>false</IsPackable>",
+                    StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var start = content.IndexOf("<Version>");
+            if (start < 0)
+                continue;
+
+            start += "<Version>".Length;
+            var end = content.IndexOf("</Version>", start);
+            if (end < 0)
+                continue;
+
+            var versionStr = content[start..end].Trim();
+            if (!Version.TryParse(versionStr, out var version))
+                continue;
+
+            if (highest == null || version > highest)
+                highest = version;
+        }
+
+        return highest;
+    }
+
+    public static async Task<string> GetRootCommitAsync(
+        string repoPath
+    )
+    {
+        var hash = await RunGitAsync(
+            repoPath,
+            "rev-list --max-parents=0 HEAD"
+        );
+        return hash.Trim();
     }
 
     public static Version ParseVersion(string tag)
@@ -58,14 +126,14 @@ public static class GitAnalyzer
         };
     }
 
-    public static async Task<int> GetCommitCountSinceTagAsync(
+    public static async Task<int> GetCommitCountSinceRefAsync(
         string repoPath,
-        string tag
+        string gitRef
     )
     {
         var log = await RunGitAsync(
             repoPath,
-            $"log {tag}..HEAD --pretty=format:\"%h\" --no-merges"
+            $"log {gitRef}..HEAD --pretty=format:\"%h\" --no-merges"
         );
 
         return string.IsNullOrWhiteSpace(log)

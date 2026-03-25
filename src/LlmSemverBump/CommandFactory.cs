@@ -78,24 +78,96 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
 
             try
             {
-                // 1. Get the last tag and current version
+                // 1. Resolve the baseline ref and current version
                 if (output == "text")
                     Console.Error.WriteLine(
                         $"Analyzing git history in {repo}..."
                     );
 
-                var lastTag = tag ?? await GitAnalyzer.GetLastTagAsync(repo);
-                var currentVersion = GitAnalyzer.ParseVersion(lastTag);
+                string lastRef;
+                Version currentVersion;
+                string displayRef;
+
+                if (tag != null)
+                {
+                    lastRef = tag;
+                    currentVersion = GitAnalyzer.ParseVersion(tag);
+                    displayRef = tag;
+                }
+                else
+                {
+                    var csprojVersion =
+                        await GitAnalyzer.ReadVersionFromCsprojAsync(repo);
+
+                    var versionChangeRef =
+                        await GitAnalyzer.TryGetLastVersionChangeRefAsync(repo);
+
+                    if (versionChangeRef != null)
+                    {
+                        currentVersion = csprojVersion ?? new Version(0, 1, 0);
+                        lastRef = versionChangeRef;
+                        displayRef =
+                            $"{versionChangeRef[..7]} "
+                            + "(last .csproj version change)";
+                    }
+                    else
+                    {
+                        var latestTag = await GitAnalyzer.TryGetLastTagAsync(repo);
+                        if (latestTag != null)
+                        {
+                            lastRef = latestTag;
+                            currentVersion = GitAnalyzer.ParseVersion(latestTag);
+                            displayRef = latestTag;
+                        }
+                        else
+                        {
+                            currentVersion = csprojVersion ?? new Version(0, 1, 0);
+                            lastRef = await GitAnalyzer.GetRootCommitAsync(repo);
+                            displayRef = "beginning of repository";
+                        }
+                    }
+                }
 
                 var commitCount = await GitAnalyzer
-                    .GetCommitCountSinceTagAsync(repo, lastTag);
+                    .GetCommitCountSinceRefAsync(repo, lastRef);
 
                 if (commitCount == 0)
                 {
                     Console.Error.WriteLine(
-                        "No commits found since last tag. "
-                        + "Nothing to bump."
+                        "No commits found since last ref. "
+                        + "Version unchanged."
                     );
+
+                    var currentVersionStr = currentVersion.ToString();
+
+                    switch (output)
+                    {
+                        case "json":
+                            Console.WriteLine($$"""
+                                {
+                                  "current_version": "{{currentVersionStr}}",
+                                  "new_version": "{{currentVersionStr}}",
+                                  "bump": "none",
+                                  "reasoning": "No commits since last ref.",
+                                  "commits_analyzed": 0,
+                                  "base_ref": "{{lastRef}}"
+                                }
+                                """);
+                            break;
+
+                        case "version-only":
+                            Console.WriteLine(currentVersionStr);
+                            break;
+
+                        default:
+                            Console.Error.WriteLine();
+                            Console.Error.WriteLine(
+                                $"  Version    : {currentVersionStr} (unchanged)"
+                            );
+                            Console.WriteLine(currentVersionStr);
+                            break;
+                    }
+
                     return 0;
                 }
 
@@ -103,7 +175,7 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                 {
                     Console.Error.WriteLine(
                         $"Found {commitCount} commits "
-                        + $"since {lastTag}"
+                        + $"since {displayRef}"
                     );
                     Console.Error.WriteLine(
                         $"Current version: {currentVersion}"
@@ -116,7 +188,7 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                 // 2. Analyze with Claude Code CLI
                 var result = await analyzer.AnalyzeAsync(
                     repo,
-                    lastTag,
+                    lastRef,
                     model
                 );
 
@@ -142,7 +214,7 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                               "bump": "{{bump}}",
                               "reasoning": "{{reasoning}}",
                               "commits_analyzed": {{commitCount}},
-                              "base_tag": "{{lastTag}}"
+                              "base_ref": "{{lastRef}}"
                             }
                             """);
                         break;

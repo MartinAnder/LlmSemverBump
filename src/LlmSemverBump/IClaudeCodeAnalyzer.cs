@@ -4,7 +4,7 @@ public interface IClaudeCodeAnalyzer
 {
     Task<AnalysisResult> AnalyzeAsync(
         string repoPath,
-        string lastTag,
+        string lastRef,
         string? model = null
     );
 }
