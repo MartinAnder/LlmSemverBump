@@ -145,7 +145,6 @@ Claude sees both the **commit messages** and the **actual code diff**, focusing 
 
 ## Tips
 
-- **Tag your initial version first**: The tool needs at least one existing tag. Run `git tag v0.1.0` before first use.
 - **Use Sonnet for cost efficiency**: The default model (`claude-sonnet-4-6`) balances quality and cost well. Use `--model claude-opus-4-6` for complex repos.
 - **Dry run in CI**: Run without `--apply` first and inspect the JSON output before committing to automated bumps.
 
