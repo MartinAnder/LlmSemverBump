@@ -70,8 +70,11 @@ public static partial class CsprojUpdater
 
             if (changed)
             {
-                // Preserve the original encoding and formatting as much as possible
-                await File.WriteAllTextAsync(filePath, doc.ToString());
+                // Replace only the version values in the original content to preserve all
+                // formatting, indentation, and empty lines that XDocument.ToString() would strip.
+                var result = VersionRegex().Replace(content, $"<Version>{newVersion}</Version>");
+                result = PackageVersionRegex().Replace(result, $"<PackageVersion>{newVersion}</PackageVersion>");
+                await File.WriteAllTextAsync(filePath, result);
                 return true;
             }
         }
@@ -81,6 +84,7 @@ public static partial class CsprojUpdater
 
             // Fallback to regex replacement
             var updated = VersionRegex().Replace(content, $"<Version>{newVersion}</Version>");
+            updated = PackageVersionRegex().Replace(updated, $"<PackageVersion>{newVersion}</PackageVersion>");
             if (updated != content)
             {
                 await File.WriteAllTextAsync(filePath, updated);
@@ -93,4 +97,7 @@ public static partial class CsprojUpdater
 
     [GeneratedRegex(@"<Version>[^<]+</Version>")]
     private static partial Regex VersionRegex();
+
+    [GeneratedRegex(@"<PackageVersion>[^<]+</PackageVersion>")]
+    private static partial Regex PackageVersionRegex();
 }
