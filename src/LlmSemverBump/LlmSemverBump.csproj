@@ -1,29 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <!-- Dotnet Tool configuration -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>llm-semver-bump</ToolCommandName>
     <PackageId>LlmSemverBump</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Martin Andersen</Authors>
     <Description>AI-powered semantic versioning tool. Analyzes git commits and diffs using Claude Code to determine the correct semver bump (major/minor/patch) for your NuGet packages.</Description>
     <PackageTags>semver;versioning;ai;claude;nuget;dotnet-tool</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.5" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="" />
   </ItemGroup>
-
 </Project>
