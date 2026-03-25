@@ -31,7 +31,7 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Install semver-bump
-        run: dotnet tool install -g LlmSemverBump
+        run: dotnet tool restore
 
       - name: Determine version bump
         id: bump
@@ -64,19 +64,15 @@ jobs:
           git push
           git push --tags
 
-      - name: Pack NuGet
-        run: dotnet pack -c Release --no-build -o ./nupkgs
-
-      - name: Publish to NuGet
-        if: github.ref == 'refs/heads/master'
-        run: dotnet nuget push ./nupkgs/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.bump.outputs.new_version }}
-          name: v${{ steps.bump.outputs.new_version }}
-          body: |
-            **Bump**: ${{ steps.bump.outputs.bump_level }}
-            **Reasoning**: ${{ steps.bump.outputs.reasoning }}
-          generate_release_notes: true
+#      - name: Pack NuGet
+#        run: dotnet pack -c Release -o ./nupkgs
+#
+#      - name: Create GitHub Release
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          tag_name: v${{ steps.bump.outputs.new_version }}
+#          name: v${{ steps.bump.outputs.new_version }}
+#          body: |
+#            **Bump**: ${{ steps.bump.outputs.bump_level }}
+#            **Reasoning**: ${{ steps.bump.outputs.reasoning }}
+#          generate_release_notes: true
