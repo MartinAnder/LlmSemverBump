@@ -56,12 +56,12 @@ public class when_a_public_class_is_removed : IAsyncLifetime
 
         // Act
         var output = await StdoutCapture.CaptureAsync(() =>
-            command.InvokeAsync([
+            command.Parse([
                 "--repo", _repo.Path,
                 "--tag", "v1.0.0",
                 "--model", "claude-haiku-4-5-20251001",
                 "--output", "version-only"
-            ])
+            ]).InvokeAsync(null, CancellationToken.None)
         );
 
         // Assert

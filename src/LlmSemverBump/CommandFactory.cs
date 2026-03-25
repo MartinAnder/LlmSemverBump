@@ -6,44 +6,51 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
 {
     public RootCommand Build()
     {
-        var repoOption = new Option<string>(
-            aliases: ["--repo", "-r"],
-            description: "Path to the git repository",
-            getDefaultValue: () => Directory.GetCurrentDirectory());
+        var repoOption = new Option<string>("--repo", ["-r"])
+        {
+            Description = "Path to the git repository",
+            DefaultValueFactory = _ => Directory.GetCurrentDirectory()
+        };
 
-        var tagOption = new Option<string?>(
-            aliases: ["--tag", "-t"],
-            description:
+        var tagOption = new Option<string?>("--tag", ["-t"])
+        {
+            Description =
                 "Override the base tag "
-                + "(default: latest tag via git describe)");
+                + "(default: latest tag via git describe)"
+        };
 
-        var csprojOption = new Option<string?>(
-            aliases: ["--csproj", "-c"],
-            description:
+        var csprojOption = new Option<string?>("--csproj", ["-c"])
+        {
+            Description =
                 "Path to a specific .csproj to update "
-                + "(default: all .csproj files with <Version>)");
+                + "(default: all .csproj files with <Version>)"
+        };
 
-        var applyOption = new Option<bool>(
-            aliases: ["--apply", "-a"],
-            description:
+        var applyOption = new Option<bool>("--apply", ["-a"])
+        {
+            Description =
                 "Apply the version bump to .csproj files "
-                + "(default: dry run)");
+                + "(default: dry run)"
+        };
 
-        var gitTagOption = new Option<bool>(
-            aliases: ["--git-tag"],
-            description:
-                "Create a git tag with the new version after applying");
+        var gitTagOption = new Option<bool>("--git-tag")
+        {
+            Description =
+                "Create a git tag with the new version after applying"
+        };
 
-        var modelOption = new Option<string?>(
-            aliases: ["--model", "-m"],
-            description:
+        var modelOption = new Option<string?>("--model", ["-m"])
+        {
+            Description =
                 "Claude model to use "
-                + "(passed to claude CLI --model)");
+                + "(passed to claude CLI --model)"
+        };
 
-        var outputOption = new Option<string>(
-            aliases: ["--output", "-o"],
-            description: "Output format: text, json, or version-only",
-            getDefaultValue: () => "text");
+        var outputOption = new Option<string>("--output", ["-o"])
+        {
+            Description = "Output format: text, json, or version-only",
+            DefaultValueFactory = _ => "text"
+        };
 
         var rootCommand = new RootCommand(
             "AI-powered semantic version bumping. "
@@ -59,9 +66,16 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
             outputOption,
         };
 
-        rootCommand.SetHandler(
-            async (repo, tag, csproj, apply, gitTag, model, output) =>
+        rootCommand.SetAction(async (parseResult, cancellationToken) =>
         {
+            var repo = parseResult.GetValue(repoOption)!;
+            var tag = parseResult.GetValue(tagOption);
+            var csproj = parseResult.GetValue(csprojOption);
+            var apply = parseResult.GetValue(applyOption);
+            var gitTag = parseResult.GetValue(gitTagOption);
+            var model = parseResult.GetValue(modelOption);
+            var output = parseResult.GetValue(outputOption)!;
+
             try
             {
                 // 1. Get the last tag and current version
@@ -82,8 +96,7 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                         "No commits found since last tag. "
                         + "Nothing to bump."
                     );
-                    Environment.ExitCode = 0;
-                    return;
+                    return 0;
                 }
 
                 if (output == "text")
@@ -209,15 +222,15 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                             );
                     }
                 }
+
+                return 0;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error: {ex.Message}");
-                Environment.ExitCode = 1;
+                return 1;
             }
-        },
-        repoOption, tagOption, csprojOption, applyOption,
-        gitTagOption, modelOption, outputOption);
+        });
 
         return rootCommand;
     }

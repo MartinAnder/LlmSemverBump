@@ -46,11 +46,11 @@ public class when_analyzing_a_repository_with_commits : IAsyncLifetime
 
         // Act
         var output = await StdoutCapture.CaptureAsync(() =>
-            command.InvokeAsync([
+            command.Parse([
                 "--repo", _repo.Path,
                 "--tag", "v1.0.0",
                 "--output", "version-only"
-            ])
+            ]).InvokeAsync(null, CancellationToken.None)
         );
 
         // Assert
@@ -70,11 +70,11 @@ public class when_analyzing_a_repository_with_commits : IAsyncLifetime
 
         // Act
         var output = await StdoutCapture.CaptureAsync(() =>
-            command.InvokeAsync([
+            command.Parse([
                 "--repo", _repo.Path,
                 "--tag", "v1.0.0",
                 "--output", "version-only"
-            ])
+            ]).InvokeAsync(null, CancellationToken.None)
         );
 
         // Assert
@@ -94,11 +94,11 @@ public class when_analyzing_a_repository_with_commits : IAsyncLifetime
 
         // Act
         var output = await StdoutCapture.CaptureAsync(() =>
-            command.InvokeAsync([
+            command.Parse([
                 "--repo", _repo.Path,
                 "--tag", "v1.0.0",
                 "--output", "version-only"
-            ])
+            ]).InvokeAsync(null, CancellationToken.None)
         );
 
         // Assert

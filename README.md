@@ -15,18 +15,32 @@ Claude examines the actual code — not just commit messages — so it catches t
 
 ```bash
 # As a global tool
-dotnet tool install -g SemverBump
+dotnet tool install -g LlmSemverBump
 
 # As a local tool (per-repo)
 dotnet new tool-manifest  # if you don't have one yet
-dotnet tool install SemverBump
+dotnet tool install LlmSemverBump
 ```
 
 ## Prerequisites
 
 - .NET 8.0 SDK or later
 - Git
-- An Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+
+### Authenticating Claude Code
+
+`llm-semver-bump` invokes the `claude` CLI under the hood, so Claude Code must be authenticated before use. There are two ways:
+
+**Interactive login** (local development):
+```bash
+claude login
+```
+
+**API key** (CI/headless environments): set the `ANTHROPIC_API_KEY` environment variable and Claude Code will use it automatically:
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
 
 ## Usage
 
@@ -34,39 +48,39 @@ dotnet tool install SemverBump
 
 ```bash
 # Analyze the current repo
-semver-bump
+llm-semver-bump
 
 # Analyze a specific repo
-semver-bump --repo /path/to/repo
+llm-semver-bump --repo /path/to/repo
 ```
 
 Output goes to **stderr** (reasoning, context) and **stdout** (just the version), so you can easily capture the version in scripts:
 
 ```bash
-NEW_VERSION=$(semver-bump)
+NEW_VERSION=$(llm-semver-bump)
 ```
 
 ### Apply Changes
 
 ```bash
 # Update all .csproj files and create a git tag
-semver-bump --apply --git-tag
+llm-semver-bump --apply --git-tag
 
 # Update a specific .csproj only
-semver-bump --apply --csproj src/MyLib/MyLib.csproj
+llm-semver-bump --apply --csproj src/MyLib/MyLib.csproj
 ```
 
 ### Output Formats
 
 ```bash
 # JSON (for CI integration)
-semver-bump --output json
+llm-semver-bump --output json
 
 # Version only (no reasoning on stderr)
-semver-bump --output version-only
+llm-semver-bump --output version-only
 
 # Default text (reasoning on stderr, version on stdout)
-semver-bump --output text
+llm-semver-bump --output text
 ```
 
 ### Options
@@ -107,9 +121,9 @@ jobs:
 
       - name: Bump version
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # authenticates Claude Code CLI
         run: |
-          semver-bump --apply --git-tag
+          llm-semver-bump --apply --git-tag
           git push --tags
           git push
 
@@ -132,7 +146,7 @@ Claude sees both the **commit messages** and the **actual code diff**, focusing 
 ## Tips
 
 - **Tag your initial version first**: The tool needs at least one existing tag. Run `git tag v0.1.0` before first use.
-- **Use Sonnet for cost efficiency**: The default model (`claude-sonnet-4-20250514`) balances quality and cost well. Use `--model claude-opus-4-6` for complex repos.
+- **Use Sonnet for cost efficiency**: The default model (`claude-sonnet-4-6`) balances quality and cost well. Use `--model claude-opus-4-6` for complex repos.
 - **Dry run in CI**: Run without `--apply` first and inspect the JSON output before committing to automated bumps.
 
 ## License
