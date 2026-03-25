@@ -63,16 +63,3 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [${{ steps.bump.outputs.bump_level }}]"
           git push
           git push --tags
-
-#      - name: Pack NuGet
-#        run: dotnet pack -c Release -o ./nupkgs
-#
-#      - name: Create GitHub Release
-#        uses: softprops/action-gh-release@v2
-#        with:
-#          tag_name: v${{ steps.bump.outputs.new_version }}
-#          name: v${{ steps.bump.outputs.new_version }}
-#          body: |
-#            **Bump**: ${{ steps.bump.outputs.bump_level }}
-#            **Reasoning**: ${{ steps.bump.outputs.reasoning }}
-#          generate_release_notes: true
