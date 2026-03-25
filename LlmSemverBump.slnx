@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="src/SemverBump/SemverBump.csproj" />
+  <Project Path="src/LlmSemverBump/LlmSemverBump.csproj" />
+  <Project Path="test/LlmSemverBump.Tests/LlmSemverBump.Tests.csproj" />
+  <Project Path="test/LlmSemverBump.IntegrationTests/LlmSemverBump.IntegrationTests.csproj" />
 </Solution>

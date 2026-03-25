@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace SemverBump;
+namespace LlmSemverBump;
 
 public record AnalysisResult(
     BumpLevel Level,
@@ -28,17 +28,69 @@ public class ClaudeCodeAnalyzer : IClaudeCodeAnalyzer
         return ParseResponse(output);
     }
 
-    private static async Task AssertClaudeIsAuthenticatedAsync()
+    public static async Task<bool> IsLoggedInAsync()
     {
-        var psi = new ProcessStartInfo
+        try
+        {
+            await AssertClaudeIsAuthenticatedAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // On Windows, npm-installed CLIs are .cmd batch wrappers which cannot be
+    // launched directly with UseShellExecute = false — cmd.exe must resolve
+    // the PATHEXT extension. We also merge the user-level PATH, because IDEs
+    // and build tools often only inherit the system-level PATH, omitting the
+    // npm global bin directory that was added at install time.
+    private static ProcessStartInfo CreateClaudeProcessInfo(string arguments)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c claude {arguments}",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            MergeUserPath(psi);
+            return psi;
+        }
+
+        return new ProcessStartInfo
         {
             FileName = "claude",
-            Arguments = "auth status",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            Arguments = arguments,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void MergeUserPath(ProcessStartInfo psi)
+    {
+        var userPath = Environment.GetEnvironmentVariable(
+            "PATH",
+            EnvironmentVariableTarget.User
+        ) ?? "";
+
+        if (string.IsNullOrEmpty(userPath))
+            return;
+
+        var processPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+        psi.Environment["PATH"] = $"{userPath};{processPath}";
+    }
+
+    private static async Task AssertClaudeIsAuthenticatedAsync()
+    {
+        var psi = CreateClaudeProcessInfo("auth status");
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException(
@@ -47,10 +99,16 @@ public class ClaudeCodeAnalyzer : IClaudeCodeAnalyzer
                 + "npm install -g @anthropic-ai/claude-code"
             );
 
-        var output = await process.StandardOutput.ReadToEndAsync();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
 
-        using var doc = JsonDocument.Parse(output);
+        // claude writes auth status JSON to stderr when run via cmd.exe /c
+        var output = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
+
+        var doc = JsonDocument.Parse(output);
         var root = doc.RootElement;
 
         if (!root.TryGetProperty("loggedIn", out var loggedIn)
@@ -128,17 +186,11 @@ public class ClaudeCodeAnalyzer : IClaudeCodeAnalyzer
             arguments += $" --model {model}";
         }
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = "claude",
-            Arguments = arguments,
-            WorkingDirectory = workingDirectory,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var psi = CreateClaudeProcessInfo(arguments);
+        psi.WorkingDirectory = workingDirectory;
+        psi.RedirectStandardInput = true;
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException(

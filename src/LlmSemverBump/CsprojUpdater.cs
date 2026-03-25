@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace SemverBump;
+namespace LlmSemverBump;
 
 public static partial class CsprojUpdater
 {

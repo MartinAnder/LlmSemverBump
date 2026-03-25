@@ -71,15 +71,15 @@ semver-bump --output text
 
 ### Options
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--repo` | `-r` | Path to git repository (default: current directory) |
-| `--tag` | `-t` | Override base tag (default: latest via `git describe`) |
-| `--csproj` | `-c` | Specific .csproj to update |
-| `--apply` | `-a` | Apply version bump to .csproj files |
-| `--git-tag` | | Create a git tag after applying |
-| `--model` | `-m` | Claude model to use (default: `claude-sonnet-4-20250514`) |
-| `--output` | `-o` | Output format: `text`, `json`, `version-only` |
+| Flag | Short | Description                                                      |
+|------|-------|------------------------------------------------------------------|
+| `--repo` | `-r` | Path to git repository (default: current directory)              |
+| `--tag` | `-t` | Override base tag (default: latest via `git describe`)           |
+| `--csproj` | `-c` | Specific .csproj to update                                       |
+| `--apply` | `-a` | Apply version bump to .csproj files                              |
+| `--git-tag` | | Create a git tag after applying                                  |
+| `--model` | `-m` | Claude model to use (default depends on your Claude Code config) |
+| `--output` | `-o` | Output format: `text`, `json`, `version-only`                    |
 
 ## GitHub Actions Example
 

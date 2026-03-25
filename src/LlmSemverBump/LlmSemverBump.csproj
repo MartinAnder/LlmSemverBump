@@ -12,7 +12,7 @@
     <PackageId>LlmSemverBump</PackageId>
     <Version>1.0.0</Version>
     <Authors>Martin Andersen</Authors>
-    <Description>AI-powered semantic versioning tool. Analyzes git commits and diffs using Claude to determine the correct semver bump (major/minor/patch) for your NuGet packages.</Description>
+    <Description>AI-powered semantic versioning tool. Analyzes git commits and diffs using Claude Code to determine the correct semver bump (major/minor/patch) for your NuGet packages.</Description>
     <PackageTags>semver;versioning;ai;claude;nuget;dotnet-tool</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

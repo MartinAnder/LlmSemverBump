@@ -1,4 +1,4 @@
-namespace SemverBump;
+namespace LlmSemverBump;
 
 public enum BumpLevel
 {

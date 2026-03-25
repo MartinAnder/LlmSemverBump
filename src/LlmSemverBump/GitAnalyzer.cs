@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace SemverBump;
+namespace LlmSemverBump;
 
 public static class GitAnalyzer
 {
