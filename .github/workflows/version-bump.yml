@@ -1,0 +1,82 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+      - '.github/**'
+
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history — required for git describe and diff
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install semver-bump
+        run: dotnet tool install -g LlmSemverBump
+
+      - name: Determine version bump
+        id: bump
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          RESULT=$(llm-semver-bump --output json)
+          echo "$RESULT" | jq .
+
+          NEW_VERSION=$(echo "$RESULT" | jq -r '.new_version')
+          BUMP_LEVEL=$(echo "$RESULT" | jq -r '.bump')
+          REASONING=$(echo "$RESULT" | jq -r '.reasoning')
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bump_level=$BUMP_LEVEL" >> $GITHUB_OUTPUT
+          echo "reasoning=$REASONING" >> $GITHUB_OUTPUT
+
+      - name: Apply version bump
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          llm-semver-bump --apply --git-tag
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [${{ steps.bump.outputs.bump_level }}]"
+          git push
+          git push --tags
+
+      - name: Pack NuGet
+        run: dotnet pack -c Release --no-build -o ./nupkgs
+
+      - name: Publish to NuGet
+        if: github.ref == 'refs/heads/master'
+        run: dotnet nuget push ./nupkgs/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          name: v${{ steps.bump.outputs.new_version }}
+          body: |
+            **Bump**: ${{ steps.bump.outputs.bump_level }}
+            **Reasoning**: ${{ steps.bump.outputs.reasoning }}
+          generate_release_notes: true
