@@ -121,12 +121,6 @@ public class when_a_repository_has_no_tags : IAsyncLifetime
         await bareRepo.RunGitAsync("commit -m \"add readme\"");
 
         var analyzer = new Mock<IClaudeCodeAnalyzer>();
-        analyzer
-            .Setup(a => a.AnalyzeAsync(
-                bareRepo.Path,
-                It.IsAny<string>(),
-                null))
-            .ReturnsAsync(new AnalysisResult(BumpLevel.Minor, "New feature"));
 
         var command = new CommandFactory(analyzer.Object).Build();
 
@@ -138,7 +132,12 @@ public class when_a_repository_has_no_tags : IAsyncLifetime
             ]).InvokeAsync(null, CancellationToken.None)
         );
 
-        // Assert — 0.1.0 minor bumped = 0.2.0
-        Assert.Equal("0.2.0", output.Trim());
+        // Assert — no version history, so 0.1.0 is the initial version unchanged
+        Assert.Equal("0.1.0", output.Trim());
+        
+        analyzer.Verify(
+            a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
     }
 }

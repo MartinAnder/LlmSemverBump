@@ -119,11 +119,49 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
                             currentVersion = GitAnalyzer.ParseVersion(latestTag);
                             displayRef = latestTag;
                         }
-                        else
+                        else if (csprojVersion != null)
                         {
-                            currentVersion = csprojVersion ?? new Version(0, 1, 0);
+                            currentVersion = csprojVersion;
                             lastRef = await GitAnalyzer.GetRootCommitAsync(repo);
                             displayRef = "beginning of repository";
+                        }
+                        else
+                        {
+                            // No version anywhere — 0.1.0 is the initial version.
+                            // Nothing to analyse; output it directly.
+                            var initial = "0.1.0";
+                            Console.Error.WriteLine(
+                                "No version found. "
+                                + $"Using {initial} as the initial version."
+                            );
+                            switch (output)
+                            {
+                                case "json":
+                                    Console.WriteLine($$"""
+                                        {
+                                          "current_version": "{{initial}}",
+                                          "new_version": "{{initial}}",
+                                          "bump": "none",
+                                          "reasoning": "No version history found.",
+                                          "commits_analyzed": 0,
+                                          "base_ref": ""
+                                        }
+                                        """);
+                                    break;
+
+                                case "version-only":
+                                    Console.WriteLine(initial);
+                                    break;
+
+                                default:
+                                    Console.Error.WriteLine();
+                                    Console.Error.WriteLine(
+                                        $"  Version    : {initial}"
+                                    );
+                                    Console.WriteLine(initial);
+                                    break;
+                            }
+                            return 0;
                         }
                     }
                 }
@@ -133,10 +171,11 @@ public class CommandFactory(IClaudeCodeAnalyzer analyzer)
 
                 if (commitCount == 0)
                 {
-                    Console.Error.WriteLine(
-                        "No commits found since last ref. "
-                        + "Version unchanged."
-                    );
+                    if (output == "text")
+                        Console.Error.WriteLine(
+                            "No commits found since last ref. "
+                            + "Version unchanged."
+                        );
 
                     var currentVersionStr = currentVersion.ToString();
 
