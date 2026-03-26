@@ -30,7 +30,7 @@ public static class GitAnalyzer
         {
             var hash = await RunGitAsync(
                 repoPath,
-                "log -1 --pretty=format:\"%H\" -G \"<Version>[0-9]\" -- *.csproj"
+                "log -1 --pretty=format:\"%H\" -G \"<Version>[0-9]\" -- *.csproj Directory.Build.props"
             );
             var trimmed = hash.Trim();
             return string.IsNullOrEmpty(trimmed) ? null : trimmed;
@@ -45,15 +45,28 @@ public static class GitAnalyzer
         string repoPath
     )
     {
-        var files = Directory.GetFiles(
+        Version? highest = null;
+
+        var buildPropsFiles = Directory.GetFiles(
+            repoPath,
+            "Directory.Build.props",
+            SearchOption.AllDirectories
+        );
+
+        foreach (var file in buildPropsFiles)
+        {
+            var version = await TryReadVersionFromFileAsync(file);
+            if (version != null && (highest == null || version > highest))
+                highest = version;
+        }
+
+        var csprojFiles = Directory.GetFiles(
             repoPath,
             "*.csproj",
             SearchOption.AllDirectories
         );
 
-        Version? highest = null;
-
-        foreach (var file in files)
+        foreach (var file in csprojFiles)
         {
             var content = await File.ReadAllTextAsync(file);
 
@@ -67,24 +80,33 @@ public static class GitAnalyzer
             if (!isPackable && !isPackAsTool)
                 continue;
 
-            var start = content.IndexOf("<Version>");
-            if (start < 0)
-                continue;
-
-            start += "<Version>".Length;
-            var end = content.IndexOf("</Version>", start);
-            if (end < 0)
-                continue;
-
-            var versionStr = content[start..end].Trim();
-            if (!Version.TryParse(versionStr, out var version))
-                continue;
-
-            if (highest == null || version > highest)
+            var version = TryParseVersionFromContent(content);
+            if (version != null && (highest == null || version > highest))
                 highest = version;
         }
 
         return highest;
+    }
+
+    private static async Task<Version?> TryReadVersionFromFileAsync(string filePath)
+    {
+        var content = await File.ReadAllTextAsync(filePath);
+        return TryParseVersionFromContent(content);
+    }
+
+    private static Version? TryParseVersionFromContent(string content)
+    {
+        var start = content.IndexOf("<Version>");
+        if (start < 0)
+            return null;
+
+        start += "<Version>".Length;
+        var end = content.IndexOf("</Version>", start);
+        if (end < 0)
+            return null;
+
+        var versionStr = content[start..end].Trim();
+        return Version.TryParse(versionStr, out var version) ? version : null;
     }
 
     public static async Task<string> GetRootCommitAsync(

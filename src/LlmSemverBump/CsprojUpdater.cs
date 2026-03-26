@@ -14,19 +14,59 @@ public static partial class CsprojUpdater
     {
         var updated = new List<string>();
 
-        var csprojFiles = specificCsproj is not null
-            ? [specificCsproj]
-            : Directory.GetFiles(repoPath, "*.csproj", SearchOption.AllDirectories);
+        if (specificCsproj is not null)
+        {
+            var isProps = Path.GetFileName(specificCsproj)
+                .Equals("Directory.Build.props", StringComparison.OrdinalIgnoreCase);
+
+            var didUpdate = isProps
+                ? await TryUpdateDirectoryBuildPropsAsync(specificCsproj, newVersion)
+                : await TryUpdateCsprojAsync(specificCsproj, newVersion);
+
+            if (didUpdate)
+                updated.Add(specificCsproj);
+
+            return updated;
+        }
+
+        var csprojFiles = Directory.GetFiles(
+            repoPath,
+            "*.csproj",
+            SearchOption.AllDirectories
+        );
 
         foreach (var file in csprojFiles)
         {
             if (await TryUpdateCsprojAsync(file, newVersion))
-            {
                 updated.Add(file);
-            }
+        }
+
+        var buildPropsFiles = Directory.GetFiles(
+            repoPath,
+            "Directory.Build.props",
+            SearchOption.AllDirectories
+        );
+
+        foreach (var file in buildPropsFiles)
+        {
+            if (await TryUpdateDirectoryBuildPropsAsync(file, newVersion))
+                updated.Add(file);
         }
 
         return updated;
+    }
+
+    private static async Task<bool> TryUpdateDirectoryBuildPropsAsync(
+        string filePath,
+        string newVersion
+    )
+    {
+        var content = await File.ReadAllTextAsync(filePath);
+
+        if (!content.Contains("<Version>") && !content.Contains("<PackageVersion>"))
+            return false;
+
+        return await ApplyVersionUpdateAsync(filePath, content, newVersion);
     }
 
     private static async Task<bool> TryUpdateCsprojAsync(string filePath, string newVersion)
@@ -43,14 +83,18 @@ public static partial class CsprojUpdater
         if (!isPackable && !isPackAsTool)
             return false;
 
-        // Check if the file has a <Version> element
-        if (!content.Contains("<Version>"))
-        {
-            // Check if it has a <PackageVersion> instead
-            if (!content.Contains("<PackageVersion>"))
-                return false;
-        }
+        if (!content.Contains("<Version>") && !content.Contains("<PackageVersion>"))
+            return false;
 
+        return await ApplyVersionUpdateAsync(filePath, content, newVersion);
+    }
+
+    private static async Task<bool> ApplyVersionUpdateAsync(
+        string filePath,
+        string content,
+        string newVersion
+    )
+    {
         try
         {
             var doc = XDocument.Parse(content);
