@@ -18,6 +18,7 @@ public class when_a_repository_has_no_tags : IAsyncLifetime
             """
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
+                <IsPackable>true</IsPackable>
                 <Version>2.0.0</Version>
               </PropertyGroup>
             </Project>

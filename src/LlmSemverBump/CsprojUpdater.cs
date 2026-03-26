@@ -33,6 +33,16 @@ public static partial class CsprojUpdater
     {
         var content = await File.ReadAllTextAsync(filePath);
 
+        var isPackable = content.Contains(
+            "<IsPackable>true</IsPackable>",
+            StringComparison.OrdinalIgnoreCase);
+        var isPackAsTool = content.Contains(
+            "<PackAsTool>true</PackAsTool>",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!isPackable && !isPackAsTool)
+            return false;
+
         // Check if the file has a <Version> element
         if (!content.Contains("<Version>"))
         {

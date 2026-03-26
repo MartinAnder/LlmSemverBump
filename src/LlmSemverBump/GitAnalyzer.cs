@@ -57,9 +57,14 @@ public static class GitAnalyzer
         {
             var content = await File.ReadAllTextAsync(file);
 
-            if (content.Contains(
-                    "<IsPackable>false</IsPackable>",
-                    StringComparison.OrdinalIgnoreCase))
+            var isPackable = content.Contains(
+                "<IsPackable>true</IsPackable>",
+                StringComparison.OrdinalIgnoreCase);
+            var isPackAsTool = content.Contains(
+                "<PackAsTool>true</PackAsTool>",
+                StringComparison.OrdinalIgnoreCase);
+
+            if (!isPackable && !isPackAsTool)
                 continue;
 
             var start = content.IndexOf("<Version>");
