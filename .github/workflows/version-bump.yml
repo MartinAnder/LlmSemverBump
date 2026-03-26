@@ -6,7 +6,7 @@ on:
       - master
     paths-ignore:
       - '*.md'
-#      - '.github/**'
+      - '.github/**'
 
 permissions:
   contents: write
@@ -39,6 +39,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           RESULT=$(llm-semver-bump --output json)
+          if [ $? -ne 0 ]; then
+            echo "llm-semver-bump failed, aborting pipeline"
+            exit 1
+          fi
           echo "$RESULT" | jq .
 
           NEW_VERSION=$(echo "$RESULT" | jq -r '.new_version')
